@@ -9,6 +9,7 @@ import time
 import xlrd
 import shutil
 import glob
+import pickle
 
 class pageInfoClass:
 	def __init__(self):
@@ -62,14 +63,9 @@ def initialize_driver():
 
 	return pageInfo
 
+def get_download_list(soup):
 
-def download_ipeds_files(pageInfo):
-	download_folder = "C:\\Users\\cseaman\\Documents\\GitHub\\Get-IPEDS-Data\\downloaded"
-	driver = pageInfo.driver
-	content = driver.page_source
-	soup = BeautifulSoup(content)
 	ipeds_files = []
-
 
 	for row in soup.findAll('tr', attrs={'class': 'idc_gridviewrow'}):
 		is_flag = False
@@ -85,8 +81,18 @@ def download_ipeds_files(pageInfo):
 		ipeds_files.append(ipedsDownloadFile(columns[1].get_text(), columns[5].a['href'], columns[5].a.get_text() + '.zip', is_flag))
 		ipeds_files.append(ipedsDownloadFile(columns[1].get_text(), columns[6].a['href'], columns[6].a.get_text() + '.zip', is_flag))
 
-	prev_survey = ''
+	return ipeds_files
 
+def download_ipeds_files(pageInfo):
+	download_folder = "C:\\Users\\cseaman\\Documents\\GitHub\\Get-IPEDS-Data\\downloaded"
+	dl_list_name = "previous_downloads.data"
+	if(not os.path.exists(download_folder)):
+		os.mkdir(download_folder)
+	driver = pageInfo.driver
+	content = driver.page_source
+	soup = BeautifulSoup(content)
+	ipeds_files = get_download_list(soup)	
+	prev_survey = ''
 
 	for f in ipeds_files:
 		if(prev_survey != f.survey):
@@ -105,12 +111,25 @@ def download_ipeds_files(pageInfo):
 		with zipfile.ZipFile(fname, 'r') as zip_ref:
 			zip_ref.extractall(flocation)
 		os.remove(fname)
+		
 		if(f.url == 'data/FLAGS2018_Dict.zip'):
 			fname = fname.replace(f.file, 'flags2018.xlsx')
 			wb = xlrd.open_workbook(fname)
 			sheet = wb.sheet_by_index(0)
 			release = sheet.cell_value(1,0).replace('(', '').replace(')', '').strip().replace(' ', '_')
 			dest_folder = flocation + '\\' + release
+			dl_list_location = dest_folder + '\\' + dl_list_name
+
+			files = glob.glob(flocation + '\\' + '*.csv')
+			files.extend(glob.glob(flocation + '\\' + '*.xlsx'))
+			files.extend(glob.glob(flocation + '\\' + '*.sps'))
+
+			if("final" in release or "Final" in release):
+				for file in files:
+					os.rename(file, file.replace(".", "_rv."))
+			elif("preliminary" in release or "Preliminary" in release):
+				for file in files:
+					os.rename(file, file.replace(".", "_pr."))
 
 			files = glob.glob(flocation + '\\' + '*.csv')
 			files.extend(glob.glob(flocation + '\\' + '*.xlsx'))
@@ -118,14 +137,25 @@ def download_ipeds_files(pageInfo):
 
 			if(not os.path.exists(dest_folder)):
 				os.mkdir(dest_folder)
+				downloaded_list = []
 				for file in files:
+					downloaded_list.append(file)
 					shutil.move(file, dest_folder)
+				if(os.path.exists(dl_list_location)):
+				with open(dl_list_location, 'wb') as filehandle:
+					pickle.dump(downloaded_list, filehandle)
 				print("Moved files to new release folder:")
 				print(release)
 				print('\n')
 			else:
+				with open(dl_list_location, 'rb') as filehandle:
+					downloaded_list = pickle.load(filehandle)
 				for file in files:
-					os.remove(file)
+					if(file in downloaded_list):
+						os.remove(file)
+					else:
+						print("New File:" + file)
+						shutil.move(file, dest_folder)
 				print("Release version already exists:")
 				print(release)
 				print('\n')
