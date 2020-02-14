@@ -91,7 +91,8 @@ def download_ipeds_files(pageInfo):
 	driver = pageInfo.driver
 	content = driver.page_source
 	soup = BeautifulSoup(content)
-	ipeds_files = get_download_list(soup)	
+	ipeds_files = get_download_list(soup)
+	pageInfo.driver.quit()	
 	prev_survey = ''
 
 	for f in ipeds_files:
@@ -142,8 +143,8 @@ def download_ipeds_files(pageInfo):
 					downloaded_list.append(file)
 					shutil.move(file, dest_folder)
 				if(os.path.exists(dl_list_location)):
-				with open(dl_list_location, 'wb') as filehandle:
-					pickle.dump(downloaded_list, filehandle)
+					with open(dl_list_location, 'wb') as filehandle:
+						pickle.dump(downloaded_list, filehandle)
 				print("Moved files to new release folder:")
 				print(release)
 				print('\n')
@@ -156,6 +157,7 @@ def download_ipeds_files(pageInfo):
 					else:
 						print("New File:" + file)
 						shutil.move(file, dest_folder)
+						downloaded_list.append(file)
 				print("Release version already exists:")
 				print(release)
 				print('\n')
@@ -165,4 +167,3 @@ if __name__ == '__main__':
 	pageInfo = initialize_driver()
 	download_ipeds_files(pageInfo)
 	print("Download Completed")
-	pageInfo.driver.quit()
