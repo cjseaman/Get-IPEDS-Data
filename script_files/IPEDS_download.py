@@ -103,7 +103,6 @@ def download_ipeds_files(pageInfo):
 			print('\n')
 			print(f.survey)
 		prev_survey = f.survey
-		print(f.file)
 		r = requests.get('https://nces.ed.gov/ipeds/datacenter/' + f.url)
 		fname = flocation + f.file
 		with open(fname, 'wb') as fi:
@@ -147,7 +146,6 @@ def download_ipeds_files(pageInfo):
 						pickle.dump(downloaded_list, filehandle)
 				print("Moved files to new release folder:")
 				print(release)
-				print('\n')
 			else:
 				with open(dl_list_location, 'rb') as filehandle:
 					downloaded_list = pickle.load(filehandle)
