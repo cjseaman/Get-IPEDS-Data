@@ -8,6 +8,7 @@ pip install bs4
 pip install selenium
 pip install pandas
 pip install openpyxl
+pip install xlrd
 
 ECHO Done!
 

@@ -11,10 +11,6 @@ import shutil
 import glob
 import pickle
 
-class pageInfoClass:
-	def __init__(self):
-		pass
-
 class ipedsDownloadFile:
 	def __init__(self, survey_text, url_text, file_name, is_flag):
 		self.survey = survey_text
@@ -24,7 +20,6 @@ class ipedsDownloadFile:
 
 def initialize_driver():
 
-	pageInfo = pageInfoClass()
 	working_directory = os.getcwd();
 	path_to_chrome_driver = working_directory + "..\\drivers\\chromedriver.exe"
 	url = "https://nces.ed.gov/ipeds/use-the-data"
@@ -35,33 +30,33 @@ def initialize_driver():
 	year_selection_xpath = '//*[@id="contentPlaceHolder_ddlYears"]/option[2]'
 	continue_button_xpath_2 = '//*[@id="contentPlaceHolder_ibtnContinue"]'
 	chrome_options = Options()
-	pageInfo.driver = webdriver.Chrome(options=chrome_options)
-	pageInfo.driver.create_options()
-	pageInfo.driver.get(url)
-	content = pageInfo.driver.page_source
-	download_options_drop = pageInfo.driver.find_elements_by_xpath(download_options_drop_xpath)[0]
+	driver = webdriver.Chrome(options=chrome_options)
+	driver.create_options()
+	driver.get(url)
+	content = driver.page_source
+	download_options_drop = driver.find_elements_by_xpath(download_options_drop_xpath)[0]
 	download_options_drop.click()
-	complete_data_files = pageInfo.driver.find_elements_by_xpath(complete_data_files_xpath)[0]
-	pageInfo.driver.execute_script("window.scrollTo(0, window.scrollY + 200)")
+	complete_data_files = driver.find_elements_by_xpath(complete_data_files_xpath)[0]
+	driver.execute_script("window.scrollTo(0, window.scrollY + 200)")
 	complete_data_files.click()
-	pageInfo.driver.switch_to.window(pageInfo.driver.window_handles[1])
-	continue_button = pageInfo.driver.find_elements_by_xpath(continue_button_xpath)[0]
+	driver.switch_to.window(driver.window_handles[1])
+	continue_button = driver.find_elements_by_xpath(continue_button_xpath)[0]
 	if(continue_button):
 		continue_button.click()
 		time.sleep(2)
-		years_drop = pageInfo.driver.find_elements_by_xpath(years_drop_xpath)[0]
+		years_drop = driver.find_elements_by_xpath(years_drop_xpath)[0]
 		years_drop.click()
 	else:
 		print("Error")
 		time.sleep(10)
 		exit()
 
-	years_selection = pageInfo.driver.find_elements_by_xpath(year_selection_xpath)[0]
+	years_selection = driver.find_elements_by_xpath(year_selection_xpath)[0]
 	years_selection.click()
-	continue_button = pageInfo.driver.find_elements_by_xpath(continue_button_xpath_2)[0]
+	continue_button = driver.find_elements_by_xpath(continue_button_xpath_2)[0]
 	continue_button.click()
 
-	return pageInfo
+	return driver
 
 def get_download_list(soup):
 
@@ -83,16 +78,20 @@ def get_download_list(soup):
 
 	return ipeds_files
 
-def download_ipeds_files(pageInfo):
-	download_folder = "C:\\Users\\cseaman\\Documents\\GitHub\\Get-IPEDS-Data\\downloaded"
+def download_ipeds_files(driver):
+	working_directory = os.getcwd();
+	download_folder = "T:\\03 - IPEDS Download\\Get-IPEDS-Data\\downloaded"
 	dl_list_name = "previous_downloads.data"
 	if(not os.path.exists(download_folder)):
 		os.mkdir(download_folder)
-	driver = pageInfo.driver
+	driver = driver
 	content = driver.page_source
-	soup = BeautifulSoup(content)
+	soup = BeautifulSoup(content, features="html.parser")
 	ipeds_files = get_download_list(soup)	
-	pageInfo.driver.quit()
+	driver.quit()
+
+	## Webpage is Closed ##
+
 	prev_survey = ''
 
 	for f in ipeds_files:
@@ -103,7 +102,6 @@ def download_ipeds_files(pageInfo):
 			print('\n')
 			print(f.survey)
 		prev_survey = f.survey
-		print(f.file)
 		r = requests.get('https://nces.ed.gov/ipeds/datacenter/' + f.url)
 		fname = flocation + f.file
 		with open(fname, 'wb') as fi:
@@ -142,12 +140,10 @@ def download_ipeds_files(pageInfo):
 				for file in files:
 					downloaded_list.append(file)
 					shutil.move(file, dest_folder)
-				if(os.path.exists(dl_list_location)):
-					with open(dl_list_location, 'wb') as filehandle:
-						pickle.dump(downloaded_list, filehandle)
+				with open(dl_list_location, 'wb') as filehandle:
+					pickle.dump(downloaded_list, filehandle)
 				print("Moved files to new release folder:")
 				print(release)
-				print('\n')
 			else:
 				with open(dl_list_location, 'rb') as filehandle:
 					downloaded_list = pickle.load(filehandle)
@@ -156,7 +152,7 @@ def download_ipeds_files(pageInfo):
 						os.remove(file)
 					else:
 						print("New File:" + file)
-						shutil.move(file, dest_folder)
+						#shutil.move(file, dest_folder)
 						downloaded_list.append(file)
 				with open(dl_list_location, 'wb') as filehandle:
 						pickle.dump(downloaded_list, filehandle)
@@ -166,6 +162,6 @@ def download_ipeds_files(pageInfo):
 
 
 if __name__ == '__main__':
-	pageInfo = initialize_driver()
-	download_ipeds_files(pageInfo)
+	driver = initialize_driver()
+	download_ipeds_files(driver)
 	print("Download Completed")
