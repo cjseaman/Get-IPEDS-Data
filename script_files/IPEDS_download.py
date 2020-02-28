@@ -79,8 +79,9 @@ def get_download_list(soup):
 	return ipeds_files
 
 def download_ipeds_files(driver):
+
 	working_directory = os.getcwd();
-	download_folder = "T:\\03 - IPEDS Download\\Get-IPEDS-Data\\downloaded"
+	download_folder = working_directory.replace("script_files", "downloaded")
 	dl_list_name = "previous_downloads.data"
 	if(not os.path.exists(download_folder)):
 		os.mkdir(download_folder)
@@ -93,8 +94,10 @@ def download_ipeds_files(driver):
 	## Webpage is Closed ##
 
 	prev_survey = ''
+	
 
 	for f in ipeds_files:
+		downloaded_files = []
 		if(prev_survey != f.survey):
 			flocation = download_folder + '\\' + f.survey.replace('/', '-') + '\\'
 			if(not os.path.exists(flocation)):
@@ -110,56 +113,58 @@ def download_ipeds_files(driver):
 		with zipfile.ZipFile(fname, 'r') as zip_ref:
 			zip_ref.extractall(flocation)
 		os.remove(fname)
+		downloaded_files.append(f.file)
+
 		
 		if(f.url == 'data/FLAGS2018_Dict.zip'):
 			fname = fname.replace(f.file, 'flags2018.xlsx')
-			wb = xlrd.open_workbook(fname)
-			sheet = wb.sheet_by_index(0)
-			release = sheet.cell_value(1,0).replace('(', '').replace(')', '').strip().replace(' ', '_')
-			dest_folder = flocation + '\\' + release
-			dl_list_location = dest_folder + '\\' + dl_list_name
+			move_to_folder(flocation, downloaded_files, fname, dl_list_name)
 
-			files = glob.glob(flocation + '\\' + '*.csv')
-			files.extend(glob.glob(flocation + '\\' + '*.xlsx'))
-			files.extend(glob.glob(flocation + '\\' + '*.sps'))
+def move_to_folder(flocation, downloaded_files, fname, dl_list_name):
 
-			if("final" in release or "Final" in release):
-				for file in files:
-					os.rename(file, file.replace(".", "_rv."))
-			elif("preliminary" in release or "Preliminary" in release):
-				for file in files:
-					os.rename(file, file.replace(".", "_pr."))
+	wb = xlrd.open_workbook(fname)
+	sheet = wb.sheet_by_index(0)
+	release = sheet.cell_value(1,0).replace('(', '').replace(')', '').strip().replace(' ', '_')
+	dest_folder = flocation + '\\' + release
+	dl_list_location = dest_folder + '\\' + dl_list_name
 
-			files = glob.glob(flocation + '\\' + '*.csv')
-			files.extend(glob.glob(flocation + '\\' + '*.xlsx'))
-			files.extend(glob.glob(flocation + '\\' + '*.sps'))
+	files = glob.glob(flocation + '\\' + '*.csv')
+	files.extend(glob.glob(flocation + '\\' + '*.xlsx'))
+	files.extend(glob.glob(flocation + '\\' + '*.sps'))
 
-			if(not os.path.exists(dest_folder)):
-				os.mkdir(dest_folder)
-				downloaded_list = []
-				for file in files:
-					downloaded_list.append(file)
-					shutil.move(file, dest_folder)
-				with open(dl_list_location, 'wb') as filehandle:
-					pickle.dump(downloaded_list, filehandle)
-				print("Moved files to new release folder:")
-				print(release)
+	if("final" in release or "Final" in release):
+		for file in files:
+			os.rename(file, file.replace(".", "_rv."))
+	elif("preliminary" in release or "Preliminary" in release):
+		for file in files:
+			os.rename(file, file.replace(".", "_pr."))
+
+	files = glob.glob(flocation + '\\' + '*.csv')
+	files.extend(glob.glob(flocation + '\\' + '*.xlsx'))
+	files.extend(glob.glob(flocation + '\\' + '*.sps'))
+
+	if(not os.path.exists(dest_folder)):
+		os.mkdir(dest_folder)
+		for file in files:
+			shutil.move(file, dest_folder)
+		with open(dl_list_location, 'wb') as filehandle:
+			pickle.dump(downloaded_files, filehandle)
+		print("Moved files to new release folder:")
+		print(release)
+	else:
+		with open(dl_list_location, 'rb') as filehandle:
+			downloaded_files = pickle.load(filehandle)
+		for file in files:
+			if(file in downloaded_files):
+				os.remove(file)
 			else:
-				with open(dl_list_location, 'rb') as filehandle:
-					downloaded_list = pickle.load(filehandle)
-				for file in files:
-					if(file in downloaded_list):
-						os.remove(file)
-					else:
-						print("New File:" + file)
-						#shutil.move(file, dest_folder)
-						downloaded_list.append(file)
-				with open(dl_list_location, 'wb') as filehandle:
-						pickle.dump(downloaded_list, filehandle)
-				print("Release version already exists:")
-				print(release)
-				print('\n')
-
+				print("New File:" + file)
+				#shutil.move(file, dest_folder)
+		with open(dl_list_location, 'wb') as filehandle:
+				pickle.dump(downloaded_files, filehandle)
+		print("Release version already exists:")
+		print(release)
+		print('\n')
 
 if __name__ == '__main__':
 	driver = initialize_driver()
