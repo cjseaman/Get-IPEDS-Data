@@ -21,7 +21,6 @@ class ipedsDownloadFile:
 def initialize_driver():
 
 	working_directory = os.getcwd();
-	path_to_chrome_driver = working_directory + "..\\drivers\\chromedriver.exe"
 	url = "https://nces.ed.gov/ipeds/use-the-data"
 	download_options_drop_xpath = "/html/body/div[1]/div[4]/div/div/div[2]/div[2]/div/dl/dt/a"
 	complete_data_files_xpath = "/html/body/div[1]/div[4]/div/div/div[2]/div[2]/div/dl/dd/ul/a[2]"
