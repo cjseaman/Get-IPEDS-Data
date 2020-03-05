@@ -25,7 +25,7 @@ def initialize_driver():
 	download_options_drop_xpath = "/html/body/div[1]/div[4]/div/div/div[2]/div[2]/div/dl/dt/a"
 	complete_data_files_xpath = "/html/body/div[1]/div[4]/div/div/div[2]/div[2]/div/dl/dd/ul/a[2]"
 	continue_button_xpath = '//*[@id="ImageButton1"]'
-	years_drop_xpath = "/html/body/div[2]/form/div[3]/div[2]/div[1]/table/tbody/tr/td[1]/div[1]/select"
+	years_drop_xpath = '//*[@id="contentPlaceHolder_ddlYears"]'
 	year_selection_xpath = '//*[@id="contentPlaceHolder_ddlYears"]/option[2]'
 	continue_button_xpath_2 = '//*[@id="contentPlaceHolder_ibtnContinue"]'
 	chrome_options = Options()
@@ -81,7 +81,6 @@ def download_ipeds_files(driver):
 
 	working_directory = os.getcwd();
 	download_folder = working_directory.replace("script_files", "downloaded")
-	dl_list_name = "previous_downloads.data"
 	if(not os.path.exists(download_folder)):
 		os.mkdir(download_folder)
 	driver = driver
@@ -96,7 +95,6 @@ def download_ipeds_files(driver):
 	
 
 	for f in ipeds_files:
-		downloaded_files = []
 		if(prev_survey != f.survey):
 			flocation = download_folder + '\\' + f.survey.replace('/', '-') + '\\'
 			if(not os.path.exists(flocation)):
@@ -112,15 +110,16 @@ def download_ipeds_files(driver):
 		with zipfile.ZipFile(fname, 'r') as zip_ref:
 			zip_ref.extractall(flocation)
 		os.remove(fname)
-		downloaded_files.append(f.file)
 
 		
 		if(f.url == 'data/FLAGS2018_Dict.zip'):
 			fname = fname.replace(f.file, 'flags2018.xlsx')
-			move_to_folder(flocation, downloaded_files, fname, dl_list_name)
+			move_to_folder(flocation, fname)
 
-def move_to_folder(flocation, downloaded_files, fname, dl_list_name):
-
+def move_to_folder(flocation, fname):
+	downloaded_files = []
+	dl_list_name = "previous_downloads.data"
+	download_directory = os.getcwd().replace("script_files", "downloaded")
 	wb = xlrd.open_workbook(fname)
 	sheet = wb.sheet_by_index(0)
 	release = sheet.cell_value(1,0).replace('(', '').replace(')', '').strip().replace(' ', '_')
@@ -146,6 +145,7 @@ def move_to_folder(flocation, downloaded_files, fname, dl_list_name):
 		os.mkdir(dest_folder)
 		for file in files:
 			shutil.move(file, dest_folder)
+			downloaded_files.append(file.replace(download_directory, ""))
 		with open(dl_list_location, 'wb') as filehandle:
 			pickle.dump(downloaded_files, filehandle)
 		print("Moved files to new release folder:")
@@ -154,11 +154,12 @@ def move_to_folder(flocation, downloaded_files, fname, dl_list_name):
 		with open(dl_list_location, 'rb') as filehandle:
 			downloaded_files = pickle.load(filehandle)
 		for file in files:
-			if(file in downloaded_files):
+			if(file.replace(download_directory, "") in downloaded_files):
 				os.remove(file)
 			else:
-				print("New File:" + file)
-				#shutil.move(file, dest_folder)
+				print("New File: " + file.replace(download_directory, ""))
+				shutil.move(file, dest_folder)
+				downloaded_files.append(file.replace(download_directory, ""))
 		with open(dl_list_location, 'wb') as filehandle:
 				pickle.dump(downloaded_files, filehandle)
 		print("Release version already exists:")
